@@ -2,11 +2,12 @@
 #include <vector>
 #include <sstream>
 #include <stdlib.h>
+#include <cstring>
 
 using namespace std;
 
 class StringHash {
-    string holdVals[5] = {"<EMPTY>", "<EMPTY>", "<EMPTY>", "<EMPTY>", "<EMPTY>"};
+    string* holdVals = new string[5];
     int permSize;
     int permInitialValue;
     int permHashMultiplier;
@@ -19,7 +20,7 @@ class StringHash {
         /* stringstream tempHolder;
          tempHolder << holdVals->size();
          int sizeOfList = atoi(tempHolder.str().c_str());*/
-        int sizeOfList = sizeof(holdVals) / sizeof(holdVals[0]);
+        int sizeOfList = holdVals->length();
         int x = 0;
         while (!found && !endReached) {
             int firstHash = HashMultiplicative(data);
@@ -53,11 +54,16 @@ class StringHash {
         } else {
             cout << "Adding \"" + data + "\"";
         }
+        bool sizeChanged = false;
         bool valFound = false;
         int locAdded = -1;
         stringstream tempHolder5;
         tempHolder5 << receivedData->at(0).size();
         int holdDataSize = atoi(tempHolder5.str().c_str());
+        if(holdDataSize > permSize){
+            holdDataSize = permSize;
+            sizeChanged = true;
+        }
         for (int x = 0; x < holdDataSize; x++) {
             if (!valFound) {
                 cout << " -> " << receivedData->at(0).at(x);
@@ -70,70 +76,35 @@ class StringHash {
 
 
         }
-        if (receivedData->at(1).at(0) == 1) {
-            cout << " -> FAILED";
-        }
 
-        if (receivedData->at(1).at(0) == 1) {
+        if (receivedData->at(1).at(0) == 1 || sizeChanged) {
             //Print FALSE
+            cout << " -> FAILED";
             return false;
         } else {
             //Print Adding
             holdVals[locAdded] = data;
             return true;
         }
-    }
-
-    void displayTable() {
-        stringstream tempHolder2;
-        tempHolder2 << holdVals->size();
-        int holdVisitedSize = atoi(tempHolder2.str().c_str());
-        for (int x = 0; x < holdVisitedSize; x++) {
-            cout << x << " : " << holdVals->at(x);
-            if (x != holdVisitedSize - 1) {
-                cout << endl;
-            }
-        }
-    };
-
-    void resize() {
-        string *tempHoldVals;
-        delete[] tempHoldVals;
-        tempHoldVals = new string[holdVals->size()];
-        stringstream tempHolder2;
-        tempHolder2 << holdVals->size();
-        int holdSizeVar = atoi(tempHolder2.str().c_str());
-        // int holdSizeVar = holdVals->size();
-        for (int i = 0; i < holdSizeVar; ++i) {
-            tempHoldVals->at(i) = holdVals->at(i);
-        }
-        //delete[] holdVals;
-        //holdVals = new string[holdSizeVar * 2];
-        for (int x = 0; x < holdSizeVar; x++) {
-            theCoolerAdd(tempHoldVals[x], true);
-            if (x != holdSizeVar - 1) {
-                cout << endl;
-            }
-        }
     };
 
     int HashMultiplicative(string key) {
         int stringHash = permInitialValue;
-        stringstream tempHolder3;
-        tempHolder3 << key.length();
-        int keyLength = atoi(tempHolder3.str().c_str());
+        int keyLength = key.length();
         for (int x = 0; x < keyLength; x++) {
             stringHash = (stringHash * permHashMultiplier) + key[x];
         }
-        return stringHash % permSize;
+        return abs(stringHash % permSize);
     }
 
 public:
     StringHash(int size, int initialValue, int hashMultiplier, int relativePrime) {
-        //delete[] holdVals;
-        //holdVals = (string*) realloc(holdVals, size * sizeof(string));
-        // string* tempVals = new string[size];
-        //holdVals = tempVals;
+        string* tempVals = new string[size];
+        for(int x=0;x<size;x++){
+            tempVals[x] = "<EMPTY>";
+        }
+        delete[] holdVals;
+        holdVals = tempVals;
         permSize = size;
         permInitialValue = initialValue;
         permHashMultiplier = hashMultiplier;
@@ -144,19 +115,17 @@ public:
         vector<int> holdVisited;
         bool found = false;
         bool endReached = false;
-        /*  stringstream tempHolder;
-          tempHolder << holdVals->length();
-          int sizeOfList = atoi(tempHolder.str().c_str());*/
-        int size = sizeof(holdVals) / sizeof(holdVals[0]);
+        int size = permSize;
         int x = 0;
         while (!found && !endReached) {
             int firstHash = HashMultiplicative(data);
             int secondHash = permRelativePrime - (firstHash % permRelativePrime);
             int doubleHash = (firstHash + (x * secondHash)) % permSize;
-            if (holdVals[doubleHash] == data) {
+           // displayTable();
+            if (holdVals[doubleHash].compare(data) == 0) {
                 found = true;
             }
-            if (x + 1 >= size) {
+            if (x + 1 >= size || holdVals[doubleHash] == "<EMPTY>") {
                 endReached = true;
             }
             holdVisited.push_back(doubleHash);
@@ -166,8 +135,15 @@ public:
         stringstream tempHolder2;
         tempHolder2 << holdVisited.size();
         int holdVisitedSize = atoi(tempHolder2.str().c_str());
+
+        bool searchDone = false;
         for (int x = 0; x < holdVisitedSize; x++) {
-            cout << " -> " << holdVisited.at(x);
+            if(!searchDone){
+                cout << " -> " << holdVisited.at(x);
+                if(data.compare(holdVals[holdVisited.at(x)]) == 0){
+                    searchDone = true;
+                }
+            }
         }
         cout << " ";
         if (found) {
@@ -205,6 +181,36 @@ public:
             return false;
         } else {
             holdVals[receivedData->at(0).at(receivedData->at(0).size() - 1)] = "<REMOVED>";
+            return true;
+        }
+    }
+
+    void resize() {
+        string* tempVals = new string[permSize*2];
+        for(int x=0;x<permSize*2;x++){
+            tempVals[x] = "<EMPTY>";
+        }
+        string* backUpVals = new string[permSize];
+        for(int y=0;y<permSize;y++){
+            backUpVals[y] = holdVals[y];
+        }
+        delete[] holdVals;
+        holdVals = tempVals;
+        permSize = permSize*2;
+        for (int x = 0; x < backUpVals->length(); x++) {
+            theCoolerAdd(backUpVals[x], true);
+            if (x != permSize - 1) {
+                cout << endl;
+            }
+        }
+    }
+
+    void displayTable() {
+        for (int x = 0; x < permSize; x++) {
+            cout << x << " : " << holdVals[x];
+            if (x != permSize - 1) {
+                cout << endl;
+            }
         }
     }
 };
@@ -256,8 +262,10 @@ int main() {
             objectToUse.remove(stringToUse);
         } else if (choice == "4") {
             //Display things
+            objectToUse.displayTable();
         } else if (choice == "5") {
             //Resize things
+            objectToUse.resize();
         } else {
             keepGoing = false;
         }
